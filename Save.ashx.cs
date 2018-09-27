@@ -16,55 +16,6 @@ namespace UploaderDemo
 
         public void ProcessRequest(HttpContext context)
         {
-
-            #region 旧版本
-            //byte[] fileData = null;
-            //using (var binaryReader = new BinaryReader(context.Request.InputStream))
-            //{
-            //    fileData = binaryReader.ReadBytes(Convert.ToInt32(context.Request.InputStream.Length));
-            //}
-
-            //string path = context.Server.MapPath("");
-            //FileStream fs = File.Create(path);
-            //fs.Write(fileData, 0, fileData.Length);
-            //fs.Dispose();
-            //fs.Close(); 
-            #endregion
-
-            #region 旧版本1.0
-            //PersonTest per = PersonTest.ParseFrom(fileData);//反序列化为对象
-
-            //string filename = per.Name;
-            //Google.ProtocolBuffers.ByteString str = per.Buf;
-            //string path = context.Server.MapPath(filename);
-            //if (per.Isimg)
-            //{
-            //    ImageHelper.SaveFromBufferOpenOrCreate(str.ToByteArray(), path);//保存图片操作
-            //}
-            //else
-            //{
-            //    FileHelper.SaveFile(str.ToByteArray(), path);//保存图片操作
-            //}
-            //var builder = per.ToBuilder();
-
-            //builder.SetName(per.Name);
-            //builder.SetEmail(per.Email);
-            //builder.SetId(1001);
-            //builder.SetIsimg(false);
-
-            //ByteString bs = ByteString.CopyFrom("ok", System.Text.Encoding.UTF8);
-            //builder.SetBuf(bs);
-
-
-            //per = builder.Build();
-
-            //context.Response.ContentType = "application/protobuf";
-            //context.Response.BinaryWrite(per.ToByteArray());
-
-            //context.Response.ContentType = "text/plain";
-            //context.Response.Write("Hello World"); 
-            #endregion
-
             try
             {
                 string rootFilePath = context.Server.MapPath("/FileUpload/");
@@ -99,8 +50,6 @@ namespace UploaderDemo
 
                         appendedLong = fs.Length;
                     }
-
-
                 }
                 if (appendedLong == len)
                 {
@@ -117,7 +66,6 @@ namespace UploaderDemo
             }
             catch (Exception ex)
             {
-
                 context.Response.ContentType = "application/json";
                 context.Response.Write(JsonConvert.SerializeObject(new { index = 0 }));
 
