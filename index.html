@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+    <script src="JS/JQuery.3.3.1.js"></script>
+    <script src="JS/spark-md5.js"></script>
+
+</head>
+<body>
+    <input type="file" id="file6" multiple>
+    <button type="button" class="btnFile6">分片上传6</button>
+    <div class="reader"></div>
+    <div class="result"></div>
+    <script type="text/javascript">
+        //方式6
+
+        var fi = undefined, md5 = "", blockSize = 1024 * 1024 * 6, beginIndex = 0;//每块的大小
+
+        //获取md5值
+        function getMd5(file, chunkSize, callback) {
+            //https://blog.csdn.net/sn_qmzm521/article/details/78731426
+
+            //声明必要的变量
+            var fileReader = new FileReader();
+            //文件分割方法（注意兼容性）
+            blobSlice = File.prototype.mozSlice || File.prototype.webkitSlice || File.prototype.slice;
+            // file = document.getElementById("file").files[0],
+
+            //文件每块分割6M，计算分割详情
+            //chunkSize = 1024 * 1024 * 6,
+            var chunks = Math.ceil(file.size / chunkSize),
+            currentChunk = 0,
+
+            //创建md5对象（基于SparkMD5）
+            spark = new SparkMD5();
+
+            //每块文件读取完毕之后的处理
+            fileReader.onload = function (e) {
+                $(".reader").html("读取文件：" + Math.floor(((currentChunk + 1) / chunks) * 100) + "%");
+                //console.log("读取文件", currentChunk + 1, "/", chunks);
+                //每块交由sparkMD5进行计算
+                spark.appendBinary(e.target.result);
+                currentChunk++;
+
+                //如果文件处理完成计算MD5，如果还有分片继续处理
+                if (currentChunk < chunks) {
+                    loadNext();
+                } else {
+                    md5 = spark.end();
+                    console.log('MD5 hash:' + md5);
+
+                    callback();
+                    return;
+                    //return spark.end();
+                }
+            }
+
+            //处理单片文件的上传
+            function loadNext() {
+                var start = currentChunk * chunkSize, end = start + chunkSize >= file.size ? file.size : start + chunkSize;
+
+                fileReader.readAsBinaryString(blobSlice.call(file, start, end));
+            }
+
+            loadNext();
+        }
+        //检测
+        function checkfile(file, md5) {
+            var formData = new FormData();//初始化一个FormData对象
+
+            formData.append("fileName", file.name);//保存文件名字
+            formData.append("md5", md5);
+            formData.append("len", file.size);
+            $.ajax({
+                url: "CheckFile.ashx",
+                type: "POST",
+                data: formData,
+                async: false,
+                processData: false,  // 告诉jQuery不要去处理发送的数据
+                contentType: false,   // 告诉jQuery不要去设置Content-Type请求头
+                success: function (responseText) {
+                    console.log(responseText);
+                    var idx = new Number(responseText.index);
+                    //var idx = parseInt(responseText.index);
+                    beginIndex = idx;
+                    if (idx == file.size) {
+                        $(".result").html("上传：" + file.name + "成功");
+                    }
+                    else if (idx < file.size) {
+                        $(".result").html("已经上传了" + Math.floor(100 * (idx / file.size)) + "%文件");
+                    }
+                    else {
+                        beginIndex = 0;
+                    }
+                }
+            });
+
+
+            if (beginIndex == file.size) {
+                return false;
+            }
+            return true;
+        }
+        //上传
+        function upload(file) {
+
+            var formData = new FormData();//初始化一个FormData对象
+
+            var fileData = file.slice(beginIndex, beginIndex + blockSize);//截取 部分文件 块
+            formData.append("file", fileData);//将 部分文件 塞入FormData
+            formData.append("fileName", file.name);//保存文件名字
+            formData.append("md5", md5);
+            formData.append("len", file.size);
+
+            $.ajax({
+                url: "Save.ashx",
+                type: "POST",
+                data: formData,
+                processData: false,  // 告诉jQuery不要去处理发送的数据
+                contentType: false,   // 告诉jQuery不要去设置Content-Type请求头
+                success: function (responseText) {
+                    var idx = new Number(responseText.index);
+                    beginIndex = idx;
+                    $(".result").html("已经上传了" + Math.floor(100 * (idx / file.size)) + "%文件");
+
+                    if (file.size == idx) {//如果上传完成，则跳出继续上传
+                        //alert("上传完成");
+                        return;
+                    }
+                    upload(file);//递归调用
+                }
+            });
+        }
+
+        function checkAndSave() {
+            if (checkfile(fi, md5)) {
+                upload(fi);
+            }
+        }
+
+        $("#file6").change(function () {
+            $(".reader").html("");
+            $(".result").html("");
+            md5 = "";
+            fi = undefined;
+            beginIndex = 0;
+
+        });
+
+        $(".btnFile6").click(function () {
+
+            fi = $("#file6")[0].files[0];
+            getMd5(fi, blockSize, checkAndSave);
+            console.log(md5);
+            //checkfile(fi, md5);
+            //}
+
+
+
+        });
+    </script>
+</body>
+</html>
